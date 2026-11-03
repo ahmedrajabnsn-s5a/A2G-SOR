@@ -1,0 +1,571 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>A2G Responsibility Matrix</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" id="xlsx-lib"></script>
+<style id="page-css">
+/* Layout: control-tower board — sticky tab strip, exec summary first, full RASCI grid second */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#121a2b; --muted:#5b6680; --line:#d9dfe8; --soft:#eaeef4;
+  --sky:#c8102e; --sky-bg:#fbe7ea; --nok:#1f5fd1; --nok-bg:#e5eefc; --stc:#6b3fa0; --stc-bg:#efe8f7;
+  --gn:var(--nok); --gn-bg:var(--nok-bg); --warn:#b26a00; --warn-bg:#fff3dc; --ok:#1d7a4c;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif; --body:"Barlow",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1220; --surface:#151c2e; --ink:#e7ebf3; --muted:#9aa5bd; --line:#2a3550; --soft:#1c2540;
+  --sky:#ff5a6e; --sky-bg:#3a1520; --nok:#6aa2ff; --nok-bg:#142a50; --stc:#b38bea; --stc-bg:#2a1d42;
+  --warn:#f0b04a; --warn-bg:#3a2a10; --ok:#4fd08c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1220; --surface:#151c2e; --ink:#e7ebf3; --muted:#9aa5bd; --line:#2a3550; --soft:#1c2540;
+  --sky:#ff5a6e; --sky-bg:#3a1520; --nok:#6aa2ff; --nok-bg:#142a50; --stc:#b38bea; --stc-bg:#2a1d42;
+  --warn:#f0b04a; --warn-bg:#3a2a10; --ok:#4fd08c; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 60px}
+header h1{font:700 clamp(30px,5vw,46px)/1 var(--display);letter-spacing:.01em;margin:0;text-wrap:balance}
+header p{color:var(--muted);margin:8px 0 0;max-width:68ch}
+.eyebrow{font:600 12px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:4px;margin:22px 0 20px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{font:600 15px var(--display);letter-spacing:.04em;text-transform:uppercase;background:none;border:0;color:var(--muted);padding:12px 14px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--ink);border-color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible,tr:focus-visible{outline:2px solid var(--nok);outline-offset:2px}
+h2{font:700 24px/1.1 var(--display);margin:0 0 4px;letter-spacing:.01em}
+.sub{color:var(--muted);margin:0 0 16px}
+section+section{margin-top:36px}
+/* party cards */
+.parties{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.party{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.party .top{display:flex;justify-content:space-between;align-items:baseline}
+.party .name{font:700 22px var(--display)}
+.party .big{font:700 40px/1 var(--display);font-variant-numeric:tabular-nums}
+.party .big small{font:500 13px var(--body);color:var(--muted);margin-left:4px}
+.party .role{color:var(--muted);font-size:14px;margin:0}
+.party ul{margin:0;padding-left:18px;font-size:14px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.s-sky{background:var(--sky)}.s-nok{background:var(--nok)}.s-stc{background:var(--stc)}.s-gn{background:var(--nok)}
+.L.R.gn{background:var(--nok);color:#fff}.L.S.gn{background:var(--nok-bg);color:var(--nok)}
+/* phase lanes */
+.lanes{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:14px}
+.lane{display:grid;grid-template-columns:minmax(150px,230px) 1fr 70px;gap:12px;align-items:center}
+.lane .lbl{font-weight:600;font-size:14px}
+.lane .lbl span{display:block;color:var(--muted);font:400 12px var(--mono)}
+.bar{display:flex;height:26px;border-radius:5px;overflow:hidden;background:var(--soft)}
+.bar div{display:flex;align-items:center;justify-content:center;color:#fff;font:600 12px var(--mono);min-width:0}
+.lane .n{font:600 13px var(--mono);color:var(--muted);text-align:right}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+/* flags */
+.flags{display:grid;gap:10px}
+.flag{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:8px;padding:14px 16px;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.flag .sev{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--warn);background:var(--warn-bg);padding:3px 8px;border-radius:4px;height:fit-content}
+.flag.hi{border-left-color:var(--sky)} .flag.hi .sev{color:var(--sky);background:var(--sky-bg)}
+.flag b{display:block}
+.flag p{margin:2px 0 0;color:var(--muted);font-size:14px;grid-column:2}
+.flag .ref{font:500 12px var(--mono);color:var(--muted);grid-column:2}
+/* matrix */
+.tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.tools input,.tools select{font:15px var(--body);padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink)}
+.tools input{flex:1 1 220px;min-width:0}
+.chip{font:600 13px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 12px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.count{font:500 13px var(--mono);color:var(--muted);margin-left:auto}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
+th{font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0}
+th.c,td.c{text-align:center;width:78px}
+td{padding:9px 12px;border-bottom:1px solid var(--soft);vertical-align:top}
+tr.row{cursor:pointer} tr.row:hover td{background:var(--soft)}
+tr.grp td{background:var(--soft);font:700 15px var(--display);letter-spacing:.03em;text-transform:uppercase;padding:8px 12px}
+td.id{font:500 13px var(--mono);color:var(--muted);width:44px;font-variant-numeric:tabular-nums}
+.act{font-weight:500}
+.tagp{font:600 11px var(--mono);color:var(--warn);background:var(--warn-bg);padding:2px 6px;border-radius:4px;margin-left:6px;white-space:nowrap}
+.L{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:6px;font:700 14px var(--mono)}
+.L.R.sky{background:var(--sky);color:#fff}.L.R.nok{background:var(--nok);color:#fff}.L.R.stc{background:var(--stc);color:#fff}
+.L.S.sky{background:var(--sky-bg);color:var(--sky)}.L.S.nok{background:var(--nok-bg);color:var(--nok)}.L.S.stc{background:var(--stc-bg);color:var(--stc)}
+.L.dash{color:var(--line)}
+.rmk{display:block;color:var(--muted);font-size:13px;margin-top:3px}
+.detail td{background:var(--soft);font-size:14px;color:var(--ink)}
+.detail ul{margin:4px 0;padding-left:18px}
+/* penalties & kpi */
+.pen{display:grid;gap:12px}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:6px 16px}
+.pcard h3{margin:0;font:700 19px var(--display)}
+.pcard .cap{font:700 26px/1 var(--display);color:var(--sky);text-align:right}
+.pcard .cap small{display:block;font:500 11px var(--mono);color:var(--muted);letter-spacing:.06em}
+.pcard p{margin:0;color:var(--muted);font-size:14px;grid-column:1/-1}
+.pcard .own{grid-column:1/-1;font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.kpi .t{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font:700 32px/1.1 var(--display);font-variant-numeric:tabular-nums;margin:4px 0}
+.kpi .k{font-size:14px}
+.kpi .w{font:500 12px var(--mono);color:var(--muted)}
+/* how-to */
+.steps{display:grid;gap:12px;counter-reset:s}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px 16px 64px;position:relative}
+.step::before{counter-increment:s;content:counter(s);position:absolute;left:18px;top:14px;font:700 30px/1 var(--display);color:var(--muted)}
+.step h3{margin:0 0 4px;font:700 19px var(--display)}
+.step p{margin:0;color:var(--muted);max-width:75ch}
+.rasci{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:12px}
+.rasci div{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;font-size:14px}
+.rasci b{font:700 22px var(--mono);display:block}
+.btn{font:600 14px var(--body);background:var(--ink);color:var(--bg);border:0;padding:9px 14px;border-radius:7px;cursor:pointer}
+footer{margin-top:40px;color:var(--muted);font-size:13px}
+@media (max-width:560px){.lane{grid-template-columns:1fr 50px}.lane .lbl{grid-column:1/-1}}
+@media (prefers-reduced-motion:no-preference){.bar div{transition:flex-grow .5s ease}}
+
+.pill{font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:4px;white-space:nowrap}
+.tagm{font:600 11px var(--mono);color:var(--nok);background:var(--nok-bg);padding:2px 6px;border-radius:4px;margin-left:6px;white-space:nowrap}
+td.code{font:600 13px var(--mono);color:var(--muted);width:56px}
+.links{font:500 12px var(--mono);color:var(--muted)}
+.sub-t{width:100%;min-width:0;margin-top:8px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.sub-t td{background:var(--surface);padding:6px 10px;font-size:13px;border-bottom:1px solid var(--soft)}
+.align{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.align div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.align b{font:700 34px/1 var(--display);display:block;font-variant-numeric:tabular-nums}
+.align span{font-size:13px;color:var(--muted)}
+.mlink{font:600 12px var(--mono);color:var(--nok);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
+
+/* edit mode */
+.editbar{position:sticky;bottom:0;z-index:6;margin-top:18px;background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.editbar .msg{font:500 14px var(--body);margin-right:auto}
+.editbar button{font:600 14px var(--body);border:1px solid color-mix(in srgb,var(--bg) 35%,transparent);background:transparent;color:var(--bg);padding:8px 12px;border-radius:7px;cursor:pointer}
+.editbar button.primary{background:var(--bg);color:var(--ink);border-color:var(--bg)}
+.editbar button:disabled{opacity:.4;cursor:default}
+.topbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.tbtn{font:600 14px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 13px;border-radius:7px;cursor:pointer}
+.tbtn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ro{font-size:13px;color:var(--muted)}
+td.act-c{width:76px;white-space:nowrap;text-align:right}
+.ib{border:1px solid var(--line);background:var(--surface);color:var(--ink);width:30px;height:30px;border-radius:6px;cursor:pointer;font:600 14px var(--mono)}
+.ib:hover{border-color:var(--ink)}
+.ib.del:hover{color:var(--sky);border-color:var(--sky)}
+body.editing .L{cursor:pointer;box-shadow:inset 0 0 0 1px var(--line)}
+body.editing .L:hover{box-shadow:inset 0 0 0 2px var(--ink)}
+.addrow{margin-top:10px}
+.st-txt{font-weight:600}
+.st-Aligned{color:var(--ok)} .st-Partial{color:var(--warn)} .st-Conflict,.st-Gap{color:var(--sky)} .st-Added{color:var(--nok)} .st-Not{color:var(--muted)}
+/* modal */
+.ov{position:fixed;inset:0;z-index:20;background:color-mix(in srgb,var(--ink) 45%,transparent);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.md{background:var(--surface);color:var(--ink);border-radius:12px;width:min(560px,100%);max-height:100%;overflow:auto;padding:20px;display:grid;gap:12px;box-shadow:0 20px 60px rgb(0 0 0 / .3)}
+.md h3{margin:0;font:700 22px var(--display)}
+.md label{display:grid;gap:4px;font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.md input,.md select,.md textarea{font:15px var(--body);padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);text-transform:none;letter-spacing:0;width:100%}
+.md textarea{min-height:70px;resize:vertical}
+.md .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.md .hint{font-size:13px;color:var(--muted);background:var(--soft);border-radius:7px;padding:8px 10px}
+.md .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.md .danger{color:var(--sky);border-color:var(--sky)}
+.md .err{color:var(--sky);font-size:13px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font:500 14px var(--body)}
+
+/* penalty dashboard */
+:root{--c1:#c8102e;--c2:#1f5fd1;--c3:#c27a00;--c4:#0f8a7e;--c5:#7a4bc2;--pass:#1d7a4c}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--c1:#ff5a6e;--c2:#6aa2ff;--c3:#f0b04a;--c4:#3fd0bf;--c5:#b38bea;--pass:#4fd08c}}
+:root[data-theme="dark"]{--c1:#ff5a6e;--c2:#6aa2ff;--c3:#f0b04a;--c4:#3fd0bf;--c5:#b38bea;--pass:#4fd08c}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;gap:4px;align-content:start}
+.tile .t{font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.tile .v{font:700 44px/1 var(--display);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.tile .v small{font:600 18px var(--display);color:var(--muted);margin-left:2px}
+.tile .d{font-size:13px;color:var(--muted)}
+.tile.alert{border-color:var(--sky);background:linear-gradient(180deg,var(--sky-bg),var(--surface) 70%)}
+.tile.alert .v{color:var(--sky)}
+.charts{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;margin-top:14px}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;min-width:0}
+.chart h3{margin:0;font:700 19px var(--display)}
+.chart .cs{margin:2px 0 10px;font-size:13px;color:var(--muted)}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart svg text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.chart svg .lbl{font-family:var(--body);font-size:12px;fill:var(--ink)}
+.chart svg .val{font-family:var(--mono);font-size:12px;font-weight:600;fill:var(--ink)}
+.chart svg .grid{stroke:var(--line);stroke-width:1}
+.chart svg .capline{stroke:var(--sky);stroke-width:1.5;stroke-dasharray:5 4}
+.lg{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:12px;color:var(--muted)}
+.lg i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.editbar[hidden]{display:none}
+.ptab{width:100%;min-width:720px}
+.ptab td{vertical-align:middle}
+.ptab .rate{font:700 18px var(--display);font-variant-numeric:tabular-nums}
+.ptab .meter{height:8px;border-radius:4px;background:var(--soft);overflow:hidden;width:110px}
+.ptab .meter div{height:100%;border-radius:4px}
+.ownr{font-weight:600}
+.kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.kc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;gap:8px}
+.kc .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.kc .t{font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.kc .v{font:700 36px/1 var(--display);font-variant-numeric:tabular-nums}
+.kc .n{font-weight:600;font-size:15px}
+.kc .w{font:500 12px var(--mono);color:var(--muted)}
+@media (max-width:820px){.charts{grid-template-columns:1fr}}
+
+/* KPI dashboard */
+.gauges{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.gauge{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 12px 16px;display:grid;justify-items:center;gap:6px;text-align:center}
+.gauge svg{width:100%;max-width:150px;height:auto;overflow:visible}
+.gauge .cat{font:600 10px var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.gauge .nm{font-weight:600;font-size:14px;line-height:1.25}
+.gauge .bud{font:500 12px var(--mono);color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.gauge .arc{animation:sweep 1.1s cubic-bezier(.2,.7,.2,1) both}@keyframes sweep{from{stroke-dashoffset:var(--len)}}}
+.charts3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px}
+.excl{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.excl div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14px;display:flex;gap:10px;align-items:flex-start}
+.excl b{font:700 18px var(--display);color:var(--muted);min-width:22px}
+@media (max-width:560px){.md .two{grid-template-columns:1fr}}
+</style>
+<template id="shell"><div class="wrap">
+<header>
+  <div class="eyebrow">Master: A2G POC NTN 2021 SOR · linked to Nokia SoW Ch.3 v24</div>
+  <h1>A2G Responsibility Matrix</h1>
+  <p>The master SOR split between SKYFive and the GN Operator (Nokia + STC). Each master line opens into the detailed activities behind it.</p>
+  <div class="topbar">
+    <button class="tbtn" id="editBtn" aria-pressed="false">Edit SOR</button>
+    <button class="tbtn" id="xlsBtn">Download Excel</button>
+    <span class="ro" id="updated"></span>
+  </div>
+</header>
+<nav role="tablist" id="tabs">
+  <button role="tab" data-v="master" aria-selected="true">Master SOR</button>
+  <button role="tab" data-v="detail" aria-selected="false">Detail</button>
+  <button role="tab" data-v="pen" aria-selected="false">Acceptance KPIs</button>
+  <button role="tab" data-v="how" aria-selected="false">How to edit</button>
+  <button role="tab" data-v="exec" aria-selected="false">Executive view</button>
+</nav>
+
+<div id="v-exec" hidden>
+  <section><h2>Who owns what</h2><p class="sub">Master lines each party leads, and how many detailed activities sit behind them.</p><div class="parties" id="parties"></div></section>
+  <section><h2>Ownership by master section</h2><p class="sub">Lines led by each party. Shared lines count for both.</p><div class="lanes" id="lanes"></div>
+   <div class="legend" style="margin-top:10px"><span><i class="sw s-sky"></i>SKYFive</span><span><i class="sw s-gn"></i>GN Operator (Nokia + STC)</span></div></section>
+  <section><h2>Does the detail match the master?</h2><p class="sub">Each master line checked against the detailed activities linked to it.</p><div class="align" id="align"></div></section>
+  <section><h2>Decisions to close before sign-off</h2><p class="sub">The master wins. Where the SoW differs, correct the SoW or update the master on purpose.</p><div class="flags" id="flags"></div>
+   <button class="tbtn addrow" id="addFlag" hidden>+ Add decision</button></section>
+</div>
+
+<div id="v-master">
+  <div class="tools">
+    <input id="mq" type="search" placeholder="Search master lines">
+    <button class="chip" data-mp="sky" aria-pressed="false">SKYFive leads</button>
+    <button class="chip" data-mp="gn" aria-pressed="false">GN Operator leads</button>
+    <select id="mst" aria-label="Alignment"><option value="">Any alignment</option></select>
+    <span class="count" id="mcount"></span>
+  </div>
+  <div class="tbl"><table>
+   <thead><tr><th>Code</th><th>Master line</th><th class="c">SKYFive</th><th class="c">GN Operator</th><th class="act-c ed" hidden></th></tr></thead>
+   <tbody id="mtb"></tbody></table></div>
+  <button class="tbtn addrow ed" id="addM" hidden>+ Add master line</button>
+</div>
+
+<div id="v-detail" hidden>
+  <div class="tools">
+    <input id="q" type="search" placeholder="Search activity or remark, e.g. XML, drive test, NMS">
+    <select id="phase" aria-label="Phase"><option value="">All phases</option></select>
+    <select id="mline" aria-label="Master line"><option value="">All master lines</option></select>
+    <button class="chip" data-p="sky" aria-pressed="false">SKYFive leads</button>
+    <button class="chip" data-p="gn" aria-pressed="false">GN Operator leads</button>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Activity</th><th>Master</th><th class="c">SKYFive</th><th class="c">GN Operator</th><th class="act-c ed" hidden></th></tr></thead>
+    <tbody id="tb"></tbody></table></div>
+  <button class="tbtn addrow ed" id="addD" hidden>+ Add detail activity</button>
+</div>
+
+<div id="v-pen" hidden>
+  <section><h2>Acceptance KPIs at a glance</h2><p class="sub">Six A2G KPIs measured at network, node and cluster level from performance and NMS tools, tied to master line E8.</p>
+   <div class="tiles" id="ktiles"></div></section>
+  <section><h2>Targets</h2><p class="sub">Each ring fills to the target the network must reach. Drop rate is the one KPI where lower is better.</p>
+   <div class="gauges" id="kgauges"></div>
+   <div class="charts3">
+    <div class="chart"><h3>Failure budget</h3><p class="cs">How much failure each KPI tolerates before it misses. Smaller budget = harder to pass.</p><div id="kbud"></div></div>
+    <div class="chart"><h3>Target profile</h3><p class="cs">All six targets as success rates (drop rate shown as 90% retained). The closer to the edge, the stricter.</p><div id="kradar"></div></div>
+    <div class="chart"><h3>Weight by category</h3><p class="cs">Six KPIs share 100% equally, so accessibility carries half the score.</p><div id="kdonut"></div><div class="lg" id="kdlg"></div></div>
+   </div></section>
+  <section><h2>What is excluded from measurement</h2><p class="sub">Samples and failures that do not count against the KPIs.</p><div class="excl" id="kexcl"></div></section>
+</div>
+
+<div id="v-how" hidden>
+  <section><h2>How to edit the SOR</h2><p class="sub">The master sets who owns each line. The detail explains how each line is delivered.</p>
+  <div class="steps">
+   <div class="step"><h3>Turn on Edit SOR</h3><p>Pencil and bin buttons appear on every row, plus "Add" buttons under each table.</p></div>
+   <div class="step"><h3>Quick change: tap an R or S</h3><p>In edit mode, tap any ownership cell to cycle it: R → S → empty. Use this to move an activity from one party to the other in one tap.</p></div>
+   <div class="step"><h3>Full edit: tap the pencil</h3><p>Change the name, owners, remarks, master line, phase or alignment. The form shows how many linked activities agree with the master owner.</p></div>
+   <div class="step"><h3>Delete safely</h3><p>Deleting a master line asks what to do with its detail activities: move them to another line, or delete them too. Every change can be undone until you save.</p></div>
+   <div class="step"><h3>Save changes</h3><p>Nothing is kept until you press Save changes. Saving publishes a new version that everyone with the link sees. Download Excel exports the current version in the same layout as the master workbook.</p></div>
+  </div></section>
+</div>
+<footer>Sources: A2G-POC-NTN-2021-SOR.xlsx (master) and Nokia SoW "Share of Responsibilities", pp. 58–65, V24. GN Operator = Nokia + STC.</footer>
+<div class="editbar" id="editbar" hidden>
+  <span class="msg" id="emsg">Edit mode. Tap R or S to change, or use the row buttons.</span>
+  <button id="undoBtn" disabled>Undo</button>
+  <button id="discardBtn" disabled>Discard</button>
+  <button id="saveBtn" class="primary" disabled>Save changes</button>
+</div>
+</div>
+</template>
+<div id="app"></div>
+<script type="application/json" id="sor-data">{"v": 1, "updated": "2026-11-03 12:35", "master": [{"code": "PM1", "sec": "Program and project management", "name": "E2E program management", "sky": "R", "gn": "", "note": "", "status": "Not in SoW", "comment": "SKYFive-only programme role."}, {"code": "PM2", "sec": "Program and project management", "name": "Project management (as per deliverables)", "sky": "R", "gn": "R", "note": "", "status": "Aligned", "comment": "Shared by all; SoW gives rollout strategy (#3) to GN Operator."}, {"code": "GN1", "sec": "Ground network", "name": "3D radio network plan update", "sky": "R", "gn": "", "note": "", "status": "Aligned", "comment": "SKYFive leads planning and parameters; GN Operator approves the RF design report (#28)."}, {"code": "GN2", "sec": "Ground network", "name": "Spectrum scanning, site survey, antenna alignment", "sky": "", "gn": "R", "note": "", "status": "Aligned", "comment": "GN Operator executes; SKYFive approves the TSSR (#25)."}, {"code": "GN3", "sec": "Ground network", "name": "Database audit and correction", "sky": "R", "gn": "", "note": "", "status": "Conflict", "comment": "Master says SKYFive; SoW gives all database rows (#5, #9, #26) to GN Operator."}, {"code": "GN4", "sec": "Ground network", "name": "eNodeB site verification and report", "sky": "S", "gn": "R", "note": "Including physical installation", "status": "Aligned", "comment": "GN Operator verifies sites; SKYFive approves validation reports (#44)."}, {"code": "GN5", "sec": "Ground network", "name": "eNodeB software upgrade to 21A", "sky": "", "gn": "R", "note": "", "status": "Gap", "comment": "GN Operator task in master with no SoW line. Add it or confirm out of scope."}, {"code": "GN6", "sec": "Ground network", "name": "eNodeB integration to NetAct", "sky": "", "gn": "R", "note": "", "status": "Aligned", "comment": "Cell IDs, XML build and NMS access all with GN Operator."}, {"code": "GN7", "sec": "Ground network", "name": "Backhaul transmission to core location", "sky": "", "gn": "R", "note": "", "status": "Gap", "comment": "GN Operator task in master with no SoW line. SoW only covers backhaul faults (#54)."}, {"code": "GN8", "sec": "Ground network", "name": "EPC loan", "sky": "", "gn": "R", "note": "", "status": "Gap", "comment": "Moved to GN Operator. No Nokia SoW line yet; add one or confirm where it is contracted."}, {"code": "GN9", "sec": "Ground network", "name": "EPC deployment at core location", "sky": "", "gn": "R", "note": "", "status": "Gap", "comment": "Moved to GN Operator. No Nokia SoW line yet; add one or confirm where it is contracted."}, {"code": "GN10", "sec": "Ground network", "name": "eNodeB-EPC integration", "sky": "", "gn": "R", "note": "", "status": "Gap", "comment": "Moved to GN Operator. No Nokia SoW line yet; add one or confirm where it is contracted."}, {"code": "GN11", "sec": "Ground network", "name": "EPC location incl. Internet & remote access", "sky": "", "gn": "R", "note": "", "status": "Gap", "comment": "STC task in master with no SoW line. Confirm where it is contracted."}, {"code": "E1", "sec": "E2E integration and validation", "name": "E2E test case definition", "sky": "R", "gn": "", "note": "", "status": "Aligned", "comment": "SKYFive defines criteria; GN Operator approves them (#38). Review who should approve."}, {"code": "E2", "sec": "E2E integration and validation", "name": "Drive tests (with aircraft test system)", "sky": "R", "gn": "S", "note": "Including drive test vehicle preparation and training", "status": "Partial", "comment": "Master: SKYFive leads, GN supports. SoW: GN Operator is R for field measurements/cars (#42) and test SIMs (#45)."}, {"code": "E3", "sec": "E2E integration and validation", "name": "E2E test case execution (with aircraft test system)", "sky": "R", "gn": "S", "note": "", "status": "Added from master", "comment": "Not in Nokia SoW; detail line #59 added from the master SOR."}, {"code": "E4", "sec": "E2E integration and validation", "name": "E2E test case execution (with aircraft on ground)", "sky": "R", "gn": "S", "note": "", "status": "Added from master", "comment": "Not in Nokia SoW; detail line #60 added from the master SOR."}, {"code": "E5", "sec": "E2E integration and validation", "name": "Flight test campaign", "sky": "R", "gn": "S", "note": "", "status": "Aligned", "comment": "SoW gives GN Operator no named support role, though master says Supports."}, {"code": "E6", "sec": "E2E integration and validation", "name": "Monitoring and support (E2E)", "sky": "R", "gn": "", "note": "", "status": "Aligned", "comment": "SKYFive monitors; GN Operator supports."}, {"code": "E7", "sec": "E2E integration and validation", "name": "Monitoring and support (RAN, backhaul)", "sky": "", "gn": "R", "note": "", "status": "Aligned", "comment": "GN Operator owns RAN and backhaul faults."}, {"code": "E8", "sec": "E2E integration and validation", "name": "E2E performance optimization", "sky": "R", "gn": "S", "note": "", "status": "Aligned", "comment": "SKYFive optimises; GN Operator executes change requests (#52, #53)."}, {"code": "A1", "sec": "Aircraft", "name": "Aircraft search", "sky": "R", "gn": "", "note": "", "status": "Added from master", "comment": "Not in Nokia SoW; detail line #61 added from the master SOR."}, {"code": "A2", "sec": "Aircraft", "name": "Aircraft solution design (OBE, cabin solution)", "sky": "R", "gn": "", "note": "Incl. travel costs (survey)", "status": "Added from master", "comment": "Not in Nokia SoW; detail line #62 added from the master SOR."}, {"code": "A3", "sec": "Aircraft", "name": "Aircraft certification (OBE, cabin solution)", "sky": "R", "gn": "", "note": "", "status": "Added from master", "comment": "Not in Nokia SoW; detail line #63 added from the master SOR."}, {"code": "A4", "sec": "Aircraft", "name": "Aircraft installation (OBE, cabin solution)", "sky": "R", "gn": "", "note": "Incl. travel costs (MRO)", "status": "Added from master", "comment": "Not in Nokia SoW; detail line #64 added from the master SOR."}, {"code": "A5", "sec": "Aircraft", "name": "Aircraft and crew flight hours", "sky": "R", "gn": "", "note": "Ferry flights and local flights, incl. travel costs (crew)", "status": "Added from master", "comment": "Not in Nokia SoW; detail line #65 added from the master SOR."}, {"code": "A6", "sec": "Aircraft", "name": "Aircraft ramp/hangar hours", "sky": "R", "gn": "", "note": "", "status": "Added from master", "comment": "Not in Nokia SoW; detail line #66 added from the master SOR."}, {"code": "A7", "sec": "Aircraft", "name": "Aircraft HW/SW", "sky": "R", "gn": "", "note": "OBE, cabin solution, installation kits", "status": "Added from master", "comment": "Not in Nokia SoW; detail line #67 added from the master SOR."}], "sow": [{"id": 1, "ph": "D1", "act": "Network planning inputs (route, traffic, QoS, throughput)", "sky": "R", "gn": "S", "rmk": "QoS and routes agreed with customer; customer sign-off on area-of-interest definition.", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 2, "ph": "D1", "act": "Network KPIs used for final acceptance", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 3, "ph": "D1", "act": "Roll-out strategy and rollout areas", "sky": "", "gn": "R", "rmk": "", "pen": "", "src": "sow", "mc": "PM2"}, {"id": 4, "ph": "D1", "act": "Layer management strategy", "sky": "R", "gn": "S", "rmk": "Single-layer 15 MHz FDD A2G network.", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 5, "ph": "D1", "act": "List of existing and friendly sites", "sky": "", "gn": "R", "rmk": "STC supports outside the Nokia footprint.", "pen": "", "src": "sow", "mc": "GN3"}, {"id": 6, "ph": "D1", "act": "Coverage plot layout, levels and colours", "sky": "R", "gn": "S", "rmk": "", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 7, "ph": "D1", "act": "Dimensioning calculation tools", "sky": "R", "gn": "S", "rmk": "Aircraft per cell decided once aircraft data is procured and processed.", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 8, "ph": "D1", "act": "RF prediction tools", "sky": "R", "gn": "S", "rmk": "STC site data must stay in-country. NDA exists STC–SkyFive. Nokia provides site DB (name, coordinates, height). SkyFive may use its own tool.", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 9, "ph": "D1", "act": "Database update on STC tools", "sky": "", "gn": "R", "rmk": "", "pen": "", "src": "sow", "mc": "GN3"}, {"id": 10, "ph": "D1", "act": "Cluster area definition", "sky": "R", "gn": "", "rmk": "No cluster area.", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 11, "ph": "D1", "act": "Digital maps", "sky": "R", "gn": "", "rmk": "Map ownership stays with SkyFive.", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 12, "ph": "D1", "act": "Propagation model tuning", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 13, "ph": "D1", "act": "Spectrum scanning (ground)", "sky": "", "gn": "R", "rmk": "Optional add-on. SkyFive defines route/test points, report format and tool list.", "pen": "", "src": "sow", "mc": "GN2"}, {"id": 14, "ph": "D1", "act": "Network planning guideline", "sky": "R", "gn": "S", "rmk": "", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 15, "ph": "D1", "act": "Three-dimensional network planning", "sky": "R", "gn": "S", "rmk": "", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 16, "ph": "D2", "act": "Radio BoQ preparation", "sky": "", "gn": "R", "rmk": "Prepared by Nokia from pre-BoQ design inputs.", "pen": "", "src": "sow", "mc": "GN4"}, {"id": 17, "ph": "D2", "act": "Search area request forms (SARFs)", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 18, "ph": "D2", "act": "Design plots (terrain-based tool)", "sky": "R", "gn": "", "rmk": "Internal use only, optional.", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 19, "ph": "D2", "act": "Nominal site survey report format", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 20, "ph": "D2", "act": "Sign-off design approval", "sky": "R", "gn": "S", "rmk": "", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 21, "ph": "D2", "act": "Nominal site surveys", "sky": "", "gn": "R", "rmk": "", "pen": "", "src": "sow", "mc": "GN2"}, {"id": 22, "ph": "D2", "act": "Site survey report", "sky": "", "gn": "R", "rmk": "", "pen": "", "src": "sow", "mc": "GN2"}, {"id": 23, "ph": "D2", "act": "Site pre-validation (candidate ranking)", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 24, "ph": "D2", "act": "Review and approve design info in TSSR", "sky": "S", "gn": "R", "rmk": "SkyFive supports if RF design changes during implementation.", "pen": "", "src": "sow", "mc": "GN2"}, {"id": 25, "ph": "D2", "act": "TSSR report approval", "sky": "R", "gn": "S", "rmk": "", "pen": "", "src": "sow", "mc": "GN2"}, {"id": 26, "ph": "D2", "act": "Detailed information of existing sites", "sky": "", "gn": "R", "rmk": "", "pen": "", "src": "sow", "mc": "GN3"}, {"id": 27, "ph": "D2", "act": "RF design report incl. coverage plots", "sky": "R", "gn": "", "rmk": "Submitted per route.", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 28, "ph": "D2", "act": "Approve RF design report", "sky": "S", "gn": "R", "rmk": "", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 29, "ph": "P", "act": "Access to sites", "sky": "", "gn": "R", "rmk": "", "pen": "", "src": "sow", "mc": "GN2"}, {"id": 30, "ph": "P", "act": "Frequency/code plan, RAN and site parameters", "sky": "R", "gn": "S", "rmk": "", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 31, "ph": "P", "act": "Unique cell IDs", "sky": "S", "gn": "R", "rmk": "", "pen": "", "src": "sow", "mc": "GN6"}, {"id": 32, "ph": "P", "act": "Site-specific configuration and parameter list", "sky": "R", "gn": "S", "rmk": "", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 33, "ph": "P", "act": "Neighbour relations definition and cross-check", "sky": "R", "gn": "S", "rmk": "", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 34, "ph": "P", "act": "Implement layer and bandwidth strategy", "sky": "R", "gn": "", "rmk": "Single-layer network.", "pen": "", "src": "sow", "mc": "GN1"}, {"id": 35, "ph": "P", "act": "Data build (XML creation)", "sky": "S", "gn": "R", "rmk": "", "pen": "", "src": "sow", "mc": "GN6"}, {"id": 36, "ph": "P", "act": "Sharing XML for site creation", "sky": "S", "gn": "R", "rmk": "Sample SCF to be shared by SkyFive.", "pen": "", "src": "sow", "mc": "GN6"}, {"id": 37, "ph": "P", "act": "Site and route acceptance criteria document", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "sow", "mc": "E1"}, {"id": 38, "ph": "P", "act": "Approval of acceptance criteria document", "sky": "S", "gn": "R", "rmk": "", "pen": "", "src": "sow", "mc": "E1"}, {"id": 39, "ph": "P", "act": "Drive test routes incl. exclusion areas", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "sow", "mc": "E2"}, {"id": 40, "ph": "P", "act": "Provide A2G drive test tool", "sky": "R", "gn": "", "rmk": "DT tool provided by SkyFive.", "pen": "", "src": "sow", "mc": "E2"}, {"id": 41, "ph": "P", "act": "A2G field test training", "sky": "R", "gn": "S", "rmk": "Nokia on-ground team: DT engineer, car, rigger, laptop.", "pen": "", "src": "sow", "mc": "E2"}, {"id": 42, "ph": "P", "act": "Field measurements and drive test cars", "sky": "S", "gn": "R", "rmk": "Nokia coordinates and writes DT report. SkyFive gives format and supports on tool/network issues.", "pen": "", "src": "sow", "mc": "E2"}, {"id": 43, "ph": "P", "act": "Pre-launch optimisation and site validation report", "sky": "", "gn": "R", "rmk": "", "pen": "", "src": "sow", "mc": "GN4"}, {"id": 44, "ph": "P", "act": "Approval of site validation reports", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "sow", "mc": "GN4"}, {"id": 45, "ph": "P", "act": "Test SIM provisioning and cost", "sky": "S", "gn": "R", "rmk": "", "pen": "", "src": "sow", "mc": "E2"}, {"id": 46, "ph": "P", "act": "Access to NMS data", "sky": "", "gn": "R", "rmk": "SkyFive needs access to BTS Site Manager and NetAct.", "pen": "", "src": "sow", "mc": "GN6"}, {"id": 47, "ph": "F", "act": "Initial in-flight test measurements", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "sow", "mc": "E5"}, {"id": 48, "ph": "F", "act": "Detailed in-flight test measurements", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "sow", "mc": "E5"}, {"id": 49, "ph": "F", "act": "DT post-processing and analysis (in-flight)", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "sow", "mc": "E5"}, {"id": 50, "ph": "F", "act": "NMS data collection and analysis", "sky": "R", "gn": "S", "rmk": "", "pen": "", "src": "sow", "mc": "E8"}, {"id": 51, "ph": "F", "act": "In-flight network validation and optimisation", "sky": "R", "gn": "S", "rmk": "", "pen": "", "src": "sow", "mc": "E8"}, {"id": 52, "ph": "F", "act": "Change request order (RAN parameters)", "sky": "S", "gn": "R", "rmk": "SkyFive raises CR; Nokia raises PCR.", "pen": "", "src": "sow", "mc": "E8"}, {"id": 53, "ph": "F", "act": "Site folder update per change request", "sky": "S", "gn": "R", "rmk": "SkyFive informs Nokia of any changes.", "pen": "", "src": "sow", "mc": "E8"}, {"id": 54, "ph": "F", "act": "Issues outside Nokia equipment (backhaul, civil, IP, SAQ)", "sky": "", "gn": "R", "rmk": "On-board equipment issues go to SkyFive.", "pen": "", "src": "sow", "mc": "E7"}, {"id": 55, "ph": "F", "act": "In-flight test report", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "sow", "mc": "E5"}, {"id": 56, "ph": "F", "act": "Post-launch A2G optimisation", "sky": "R", "gn": "S", "rmk": "", "pen": "", "src": "sow", "mc": "E8"}, {"id": 57, "ph": "L", "act": "Post-launch performance reporting and monitoring", "sky": "R", "gn": "S", "rmk": "", "pen": "", "src": "sow", "mc": "E6"}, {"id": 58, "ph": "L", "act": "Post-launch link data analytics and optimisation", "sky": "R", "gn": "S", "rmk": "", "pen": "", "src": "sow", "mc": "E8"}, {"id": 59, "ph": "P", "act": "E2E test case execution (with aircraft test system)", "sky": "R", "gn": "S", "rmk": "Ground tests using the aircraft test system.", "pen": "", "src": "master", "mc": "E3"}, {"id": 60, "ph": "F", "act": "E2E test case execution (with aircraft on ground)", "sky": "R", "gn": "S", "rmk": "Tests with the aircraft on the ground.", "pen": "", "src": "master", "mc": "E4"}, {"id": 61, "ph": "AC", "act": "Aircraft search", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "master", "mc": "A1"}, {"id": 62, "ph": "AC", "act": "Aircraft solution design (OBE, cabin solution)", "sky": "R", "gn": "", "rmk": "Incl. travel costs (survey).", "pen": "", "src": "master", "mc": "A2"}, {"id": 63, "ph": "AC", "act": "Aircraft certification (OBE, cabin solution)", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "master", "mc": "A3"}, {"id": 64, "ph": "AC", "act": "Aircraft installation (OBE, cabin solution)", "sky": "R", "gn": "", "rmk": "Incl. travel costs (MRO).", "pen": "", "src": "master", "mc": "A4"}, {"id": 65, "ph": "AC", "act": "Aircraft and crew flight hours", "sky": "R", "gn": "", "rmk": "Ferry flights and local flights, incl. travel costs (crew).", "pen": "", "src": "master", "mc": "A5"}, {"id": 66, "ph": "AC", "act": "Aircraft ramp/hangar hours", "sky": "R", "gn": "", "rmk": "", "pen": "", "src": "master", "mc": "A6"}, {"id": 67, "ph": "AC", "act": "Aircraft HW/SW", "sky": "R", "gn": "", "rmk": "OBE, cabin solution, installation kits.", "pen": "", "src": "master", "mc": "A7"}], "flags": [{"id": 1, "sev": "high", "title": "GN3 Database audit: master and SoW disagree", "text": "Master gives it to SKYFive. The SoW gives all three database activities (#5 existing sites, #9 STC tool update, #26 existing site details) to the GN Operator. Decide one owner.", "ref": "GN3 · #5 #9 #26"}, {"id": 3, "sev": "high", "title": "GN tasks with no SoW line", "text": "Master assigns eNodeB software upgrade to 21A (GN5), backhaul transmission (GN7), the EPC loan, deployment and eNodeB-EPC integration (GN8–GN10) and EPC hosting with internet and remote access (GN11) to the GN Operator, but the SoW has no activity for them. Add them or confirm they sit in another contract.", "ref": "GN5 · GN7 · GN8–GN11"}, {"id": 4, "sev": "clarify", "title": "E2 Drive tests: who leads in the field?", "text": "Master: SKYFive leads, GN Operator supports. SoW: GN Operator is R for field measurements and cars (#42) and test SIMs (#45). Clarify that SKYFive leads the test and the GN Operator runs the field team.", "ref": "E2 · #42 #45"}, {"id": 5, "sev": "clarify", "title": "E1 Acceptance criteria approved by the measured party", "text": "SKYFive writes them (#37) and the GN Operator approves them (#38). Agree an independent approver.", "ref": "E1 · #37 #38"}, {"id": 6, "sev": "clarify", "title": "E5 Flight test: support role not written down", "text": "Master says the GN Operator supports the flight test campaign, but #47–#55 give it no named role. Add a support line, for example on-call RAN changes during flights.", "ref": "E5"}, {"id": 7, "sev": "clarify", "title": "No approver on any row", "text": "Neither document uses an \"A\". Add one approver per master line at sign-off.", "ref": "All"}]}</script>
+<script id="main">(function(){
+const app=document.getElementById("app");
+app.appendChild(document.getElementById("shell").content.cloneNode(true));
+const $=id=>document.getElementById(id);
+const SAVED=JSON.parse($("sor-data").textContent);
+let S=structuredClone(SAVED);
+try{const d=sessionStorage.getItem("sor-draft");if(d){const x=JSON.parse(d);const n=o=>JSON.stringify({...o,updated:""});if(x&&x.state&&n(x.state)!==n(SAVED))S=x.state;sessionStorage.removeItem("sor-draft")}}catch(e){}
+const PH={D1:"3D network planning",D2:"Ground network design",P:"Pre-launch ground validation",F:"Pre-launch flight validation",L:"Link data analytics",AC:"Aircraft"};
+const PEN={rf:{t:"RF design report incl. coverage plots",ref:"SoW 1.2",d:"Continuous coverage not achieved for flight routes: 1% of the 3D radio planning value per week of delay."},
+ dt:{t:"Provide A2G drive test tool",ref:"SoW 1.4.12",d:"DT kits not secured 5 days after site on air: 3% of the pre-launch ground validation value per week."},
+ acc:{t:"Approval of site acceptance reports",ref:"SoW 1.4.15",d:"Final acceptance report per site not in within 12 days of integration or 5 days of on-air: 3% per week."},
+ flt:{t:"Acceptance of flight test report",ref:"SoW 1.5.9",d:"Successful in-flight test not in within 21 days of first 10 sites on air: 1% per week. Final 52-route report late: 1% per working day."},
+ kpi:{t:"Link data analytics and optimisation",ref:"SoW 2",d:"Failing the six KPIs. The 10% is split equally across them."}};
+const KPI=[["Accessibility","RACH setup completion SR","≥ 98%"],["Accessibility","RRC connection setup SR","≥ 95.0%"],["Accessibility","E-RAB setup SR","≥ 95.0%"],["Retainability","E-RAB drop rate","≤ 10%"],["Mobility","Intra-eNB handover SR","≥ 90%"],["Mobility","Inter-eNB handover SR","≥ 80.0%"]];
+const P=[["sky","SKYFive"],["gn","GN Operator"]];
+const ST=["Aligned","Partial","Conflict","Gap","Added from master","Not in SoW"];
+const SD={Aligned:"Detail agrees with master",Partial:"Lead split differs",Conflict:"Detail contradicts master",Gap:"GN task with no detail","Added from master":"Detail added from master","Not in SoW":"No detail activity"};
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const own=r=>r.sky==="R"?"sky":r.gn==="R"?"gn":"";
+const L=(v,k,ref)=>`<span class="L ${v||"dash"} ${k}" data-cell="${ref}" ${editing?'role="button" tabindex="0" title="Tap to change"':""}>${v||"·"}</span>`;
+const stTxt=s=>`<span class="st-txt st-${s.split(" ")[0]}">${esc(s)}</span>`;
+const links=code=>S.sow.filter(r=>r.mc===code);
+const mBy=code=>S.master.find(m=>m.code===code);
+const secs=()=>[...new Set(S.master.map(m=>m.sec))];
+let editing=false,hist=[],ro=false;
+
+// ---------- render
+function renderAll(){renderExec();renderM();renderD();renderPen();
+ $("updated").textContent="Version of "+S.updated+(hist.length?" · unsaved changes":"");
+ document.querySelectorAll(".ed").forEach(e=>e.hidden=!editing);$("addFlag").hidden=!editing;
+ $("editbar").hidden=!editing;$("undoBtn").disabled=!hist.length;$("discardBtn").disabled=!hist.length;$("saveBtn").disabled=!hist.length||ro;
+ $("emsg").textContent=ro?"You can view this SOR but not save changes to it.":hist.length?`${hist.length} unsaved change${hist.length>1?"s":""}. Save to keep them.`:"Edit mode. Tap R or S to change, or use the row buttons.";
+ document.body.classList.toggle("editing",editing)}
+const ROLE={sky:"Programme lead, 3D radio design, E2E testing, flight campaign, optimisation and the whole aircraft side.",gn:"Nokia + STC: site surveys and verification, eNodeB software and NetAct, backhaul, EPC loan, deployment, integration and hosting, RAN and backhaul support."};
+function renderExec(){
+ $("parties").innerHTML=P.map(([k,n])=>{const lead=S.master.filter(m=>m[k]==="R"),sup=S.master.filter(m=>m[k]==="S"),det=S.sow.filter(r=>own(r)===k).length;
+  return `<div class="party"><div class="top"><span class="name"><i class="sw s-${k}"></i>${n}</span><span class="big" style="color:var(--${k})">${lead.length}<small>lead · ${sup.length} support</small></span></div>
+  <p class="role">${ROLE[k]}</p><p class="role"><b style="color:var(--ink)">${det}</b> of ${S.sow.length} detailed activities led</p></div>`}).join("");
+ $("lanes").innerHTML=secs().map(s=>{const rows=S.master.filter(m=>m.sec===s);
+  const bars=P.map(([k])=>{const n=rows.filter(m=>m[k]==="R").length;return n?`<div style="flex-grow:${n};background:var(--${k})">${n}</div>`:""}).join("");
+  return `<div class="lane"><div class="lbl">${esc(s)}<span>${esc(rows[0].code)}–${esc(rows.at(-1).code)}</span></div><div class="bar">${bars}</div><div class="n">${rows.length} lines</div></div>`}).join("");
+ $("align").innerHTML=ST.map(s=>`<div><b>${S.master.filter(m=>m.status===s).length}</b>${stTxt(s)}<br><span>${SD[s]}</span></div>`).join("");
+ $("flags").innerHTML=S.flags.map(f=>`<div class="flag ${f.sev==="high"?"hi":""}"><span class="sev">${f.sev==="high"?"High":"Clarify"}</span><b>${esc(f.title)}</b><p>${esc(f.text)}</p><span class="ref">${esc(f.ref)}${editing?` &nbsp;<button class="ib" data-ef="${f.id}" aria-label="Edit">✎</button> <button class="ib del" data-xf="${f.id}" aria-label="Delete">🗑</button>`:""}</span></div>`).join("")||`<p class="sub">No open decisions.</p>`}
+let mparty="",mopen=null;
+function renderM(){const q=$("mq").value.toLowerCase(),st=$("mst").value;
+ const rows=S.master.filter(m=>(!mparty||m[mparty]==="R")&&(!st||m.status===st)&&(!q||(m.code+" "+m.name+" "+m.note+" "+m.comment).toLowerCase().includes(q)));
+ let h="",last="";
+ rows.forEach(m=>{if(m.sec!==last){h+=`<tr class="grp"><td colspan="${editing?5:4}">${esc(m.sec)}</td></tr>`;last=m.sec}
+  const lk=links(m.code);
+  h+=`<tr class="row" tabindex="0" data-c="${esc(m.code)}"><td class="code">${esc(m.code)}</td><td><span class="act">${esc(m.name)}</span>${m.note?`<span class="rmk">${esc(m.note)}</span>`:""}<span class="links">${lk.length?lk.length+" detailed activit"+(lk.length>1?"ies":"y"):"No detail"}</span></td><td class="c">${L(m.sky,"sky","m:"+m.code+":sky")}</td><td class="c">${L(m.gn,"gn","m:"+m.code+":gn")}</td>${editing?`<td class="act-c"><button class="ib" data-em="${esc(m.code)}" aria-label="Edit">✎</button> <button class="ib del" data-xm="${esc(m.code)}" aria-label="Delete">🗑</button></td>`:""}</tr>`;
+  if(mopen===m.code){const sub=lk.map(r=>`<tr><td class="id">#${r.id}</td><td>${esc(r.act)}</td><td class="c">${L(r.sky,"sky","d:"+r.id+":sky")}</td><td class="c">${L(r.gn,"gn","d:"+r.id+":gn")}</td></tr>`).join("");
+   h+=`<tr class="detail"><td></td><td colspan="${editing?4:3}"><div><b>Detail check:</b> ${stTxt(m.status)}. ${esc(m.comment)}</div>${sub?`<table class="sub-t">${sub}</table>`:""}</td></tr>`}});
+ $("mtb").innerHTML=h||`<tr><td colspan="5" style="padding:24px;color:var(--muted)">No master line matches.</td></tr>`;
+ $("mcount").textContent=`${rows.length} of ${S.master.length}`}
+const sel=$("phase"),ml=$("mline");
+Object.entries(PH).forEach(([k,v])=>sel.insertAdjacentHTML("beforeend",`<option value="${k}">${v}</option>`));
+ST.forEach(s=>$("mst").insertAdjacentHTML("beforeend",`<option>${s}</option>`));
+let party="",onlyPen=false,open=null;
+function renderD(){const cur=ml.value;ml.innerHTML=`<option value="">All master lines</option>`+S.master.map(m=>`<option value="${esc(m.code)}">${esc(m.code)} · ${esc(m.name)}</option>`).join("");ml.value=cur;
+ const q=$("q").value.toLowerCase();
+ const rows=S.sow.filter(r=>(!sel.value||r.ph===sel.value)&&(!ml.value||r.mc===ml.value)&&(!party||own(r)===party)&&(!q||(r.act+" "+r.rmk).toLowerCase().includes(q)));
+ const order=Object.keys(PH);rows.sort((a,b)=>order.indexOf(a.ph)-order.indexOf(b.ph)||a.id-b.id);
+ let h="",last="";const cs=editing?6:5;
+ rows.forEach(r=>{if(r.ph!==last){h+=`<tr class="grp"><td colspan="${cs}">${PH[r.ph]||r.ph}</td></tr>`;last=r.ph}
+  const m=mBy(r.mc);
+  h+=`<tr class="row" tabindex="0" data-id="${r.id}"><td class="id">${r.id}</td><td><span class="act">${esc(r.act)}</span></td><td class="code" title="${esc(m?m.name:"Not linked")}">${esc(r.mc||"—")}</td><td class="c">${L(r.sky,"sky","d:"+r.id+":sky")}</td><td class="c">${L(r.gn,"gn","d:"+r.id+":gn")}</td>${editing?`<td class="act-c"><button class="ib" data-ed="${r.id}" aria-label="Edit">✎</button> <button class="ib del" data-xd="${r.id}" aria-label="Delete">🗑</button></td>`:""}</tr>`;
+  if(open===r.id)h+=`<tr class="detail"><td></td><td colspan="${cs-1}"><div><b>Master line ${esc(r.mc||"—")}:</b> ${esc(m?m.name:"Not linked to a master line")}</div><div style="margin-top:4px">${r.src==="master"?"Source: master SOR. ":"Source: Nokia SoW. "}${r.rmk?esc(r.rmk):""}</div></td></tr>`});
+ $("tb").innerHTML=h||`<tr><td colspan="6" style="padding:24px;color:var(--muted)">No activity matches.</td></tr>`;
+ $("count").textContent=`${rows.length} of ${S.sow.length}`}
+const KD=[{c:"Accessibility",n:"RACH setup completion SR",t:98,d:"ge"},{c:"Accessibility",n:"RRC connection setup SR",t:95,d:"ge"},{c:"Accessibility",n:"E-RAB setup SR",t:95,d:"ge"},{c:"Retainability",n:"E-RAB drop rate",t:10,d:"le"},{c:"Mobility",n:"Intra-eNB handover SR",t:90,d:"ge"},{c:"Mobility",n:"Inter-eNB handover SR",t:80,d:"ge"}];
+const KC={Accessibility:"--c2",Retainability:"--c3",Mobility:"--c4"};
+const bud=k=>k.d==="ge"?100-k.t:k.t, succ=k=>k.d==="ge"?k.t:100-k.t;
+function renderPen(){
+ $("ktiles").innerHTML=[
+  ["Acceptance KPIs","6","Equal weight, 16.7% each",""],
+  ["Strictest target","98<small>%</small>","RACH setup completion: only 2% failure allowed","alert"],
+  ["Average success target","91.3<small>%</small>","Across all six, drop rate counted as 90% retained",""],
+  ["Largest failure budget","20<small>%</small>","Inter-eNB handover, target ≥ 80%",""],
+  ["Minimum altitude","3,000<small>m</small>","Samples below this do not count",""]
+ ].map(([t,v,d,c])=>`<div class="tile ${c}"><span class="t">${t}</span><span class="v">${v}</span><span class="d">${d}</span></div>`).join("");
+ // ring gauges
+ const R=52,C=2*Math.PI*R;
+ $("kgauges").innerHTML=KD.map(k=>{const f=k.t/100,len=(C*f).toFixed(1);
+  return `<div class="gauge"><span class="cat" style="color:var(${KC[k.c]})">${k.c}</span>
+  <svg viewBox="0 0 140 140" role="img" aria-label="${k.n} target ${k.d==="ge"?"at least":"at most"} ${k.t}%"><circle cx="70" cy="70" r="${R}" fill="none" stroke="var(--soft)" stroke-width="14"/>
+  <circle class="arc" cx="70" cy="70" r="${R}" fill="none" stroke="var(${k.d==="le"?"--c3":KC[k.c]})" stroke-width="14" stroke-linecap="round" stroke-dasharray="${len} ${C}" style="--len:${len}" transform="rotate(-90 70 70)"/>
+  <text x="70" y="68" text-anchor="middle" style="font:700 30px var(--display);fill:var(--ink)">${k.t}%</text><text x="70" y="88" text-anchor="middle" style="font:600 11px var(--mono);fill:var(--muted)">${k.d==="ge"?"AT LEAST":"AT MOST"}</text></svg>
+  <span class="nm">${k.n}</span><span class="bud">failure budget ${bud(k)}%</span></div>`}).join("");
+ // failure budget bars
+ const BW=360,rh=40,lw=150,top=4,H=KD.length*rh+top+24,xs=v=>lw+v/25*(BW-lw-34);
+ let g="";for(let v=0;v<=25;v+=5)g+=`<line class="grid" x1="${xs(v)}" x2="${xs(v)}" y1="${top}" y2="${H-20}"/><text x="${xs(v)}" y="${H-5}" text-anchor="middle">${v}%</text>`;
+ [...KD].sort((a,b)=>bud(a)-bud(b)).forEach((k,i)=>{const y=top+i*rh;g+=`<text class="lbl" x="${lw-8}" y="${y+rh/2+4}" text-anchor="end">${k.n.replace(" setup","").replace(" completion","").replace(" connection","")}</text><rect x="${lw}" y="${y+9}" width="${xs(bud(k))-lw}" height="${rh-18}" rx="4" fill="var(${KC[k.c]})"/><text class="val" x="${xs(bud(k))+6}" y="${y+rh/2+4}">${bud(k)}%</text>`});
+ $("kbud").innerHTML=`<svg viewBox="0 0 ${BW} ${H}" role="img" aria-label="Failure budget per KPI">${g}</svg>`;
+ // radar 70..100
+ const cx=170,cy=150,rr=110,lo=70,ang=i=>-Math.PI/2+i*2*Math.PI/6,pt=(i,v)=>{const q=(v-lo)/(100-lo)*rr;return [cx+q*Math.cos(ang(i)),cy+q*Math.sin(ang(i))]};
+ let rd="";[80,90,100].forEach(v=>{rd+=`<polygon points="${KD.map((_,i)=>pt(i,v).join(",")).join(" ")}" fill="none" class="grid"/><text x="${cx+4}" y="${pt(0,v)[1]+12}">${v}%</text>`});
+ KD.forEach((k,i)=>{const [x,y]=pt(i,100);rd+=`<line class="grid" x1="${cx}" y1="${cy}" x2="${x}" y2="${y}"/>`;const [lx,ly]=pt(i,111);rd+=`<text class="lbl" x="${lx}" y="${ly+4}" text-anchor="${Math.abs(lx-cx)<10?"middle":lx>cx?"start":"end"}">${k.n.split(" ")[0]==="E-RAB"?k.n.replace(" SR","").replace(" rate",""):k.n.split(" ")[0]+(k.n.includes("handover")?" HO":"")}</text>`});
+ rd+=`<polygon points="${KD.map((k,i)=>pt(i,succ(k)).join(",")).join(" ")}" fill="var(--c2)" fill-opacity=".18" stroke="var(--c2)" stroke-width="2.5" stroke-linejoin="round"/>`;
+ KD.forEach((k,i)=>{const [x,y]=pt(i,succ(k));rd+=`<circle cx="${x}" cy="${y}" r="4.5" fill="var(${KC[k.c]})" stroke="var(--surface)" stroke-width="2"/>`});
+ $("kradar").innerHTML=`<svg viewBox="0 0 340 300" role="img" aria-label="Target profile radar">${rd}</svg>`;
+ // donut
+ const cats=[["Accessibility",3],["Mobility",2],["Retainability",1]];let a0=-Math.PI/2,dn="";const DR=80,dc=110;
+ cats.forEach(([c,n])=>{const a1=a0+n/6*2*Math.PI,lg=n>3?1:0,p0=[dc+DR*Math.cos(a0),dc+DR*Math.sin(a0)],p1=[dc+DR*Math.cos(a1),dc+DR*Math.sin(a1)];
+  dn+=`<path d="M${p0} A${DR},${DR} 0 ${lg} 1 ${p1}" fill="none" stroke="var(${KC[c]})" stroke-width="30"/>`;
+  const am=(a0+a1)/2;dn+=`<text class="val" x="${dc+DR*Math.cos(am)}" y="${dc+DR*Math.sin(am)+4}" text-anchor="middle" style="fill:#fff">${(n/6*100).toFixed(n===3?0:1)}%</text>`;a0=a1});
+ dn+=`<text x="${dc}" y="${dc-2}" text-anchor="middle" style="font:700 34px var(--display);fill:var(--ink)">6</text><text x="${dc}" y="${dc+18}" text-anchor="middle">KPIs</text>`;
+ $("kdonut").innerHTML=`<svg viewBox="0 0 220 220" role="img" aria-label="Weight by category" style="max-width:240px;margin:0 auto">${dn}</svg>`;
+ $("kdlg").innerHTML=cats.map(([c,n])=>`<span><i style="background:var(${KC[c]})"></i>${c} · ${n} KPI${n>1?"s":""}</span>`).join("");
+ const EX=["Samples taken below 3,000 m altitude","Samples outside the agreed area-of-interest polygon","Failures not related to the ground network","Backhaul, civil, IP and SAQ issues","KPI degradation from in-plane equipment or receivers","Site MDT periods","Third-party integrations and external systems","External interference, band limits or capex constraints"];
+ $("kexcl").innerHTML=EX.map((e,i)=>`<div><b>${i+1}</b><span>${e}</span></div>`).join("")+`<div style="grid-column:1/-1;background:var(--soft)"><span>Monthly KPI values are calculated only for time with 100% site availability.</span></div>`}
+// ---------- change tracking
+function change(fn,label){hist.push(structuredClone(S));fn();toast(label);renderAll()}
+let tt;function toast(t){if(!t)return;let e=document.querySelector(".toast");if(!e){e=document.createElement("div");e.className="toast";e.setAttribute("role","status");document.body.appendChild(e)}e.textContent=t;clearTimeout(tt);tt=setTimeout(()=>e.remove(),2200)}
+$("undoBtn").onclick=()=>{if(hist.length){S=hist.pop();toast("Undone");renderAll()}};
+$("discardBtn").onclick=()=>confirmBox("Discard all unsaved changes?","Discard",()=>{S=structuredClone(SAVED);hist=[];toast("Changes discarded");renderAll()});
+$("editBtn").onclick=()=>{editing=!editing;$("editBtn").setAttribute("aria-pressed",editing);$("editBtn").textContent=editing?"Done editing":"Edit SOR";renderAll()};
+const cyc=v=>v==="R"?"S":v==="S"?"":"R";
+document.addEventListener("click",e=>{
+ const c=e.target.closest("[data-cell]");
+ if(c&&editing){e.stopPropagation();const [t,id,k]=c.dataset.cell.split(":");
+  const o=t==="m"?mBy(id):S.sow.find(r=>r.id===+id);
+  change(()=>{o[k]=cyc(o[k])},`${t==="m"?id:"#"+id} ${k==="sky"?"SKYFive":"GN Operator"} → ${cyc(o[k])||"empty"}`);return}
+ const b=e.target.closest("button[data-em],button[data-xm],button[data-ed],button[data-xd],button[data-ef],button[data-xf]");
+ if(b){e.stopPropagation();const d=b.dataset;
+  if(d.em)editMaster(mBy(d.em));if(d.xm)delMaster(mBy(d.xm));if(d.ed)editDetail(S.sow.find(r=>r.id===+d.ed));if(d.xd)delDetail(S.sow.find(r=>r.id===+d.xd));
+  if(d.ef)editFlag(S.flags.find(f=>f.id===+d.ef));if(d.xf){const f=S.flags.find(x=>x.id===+d.xf);confirmBox(`Delete decision "${f.title}"?`,"Delete",()=>change(()=>{S.flags=S.flags.filter(x=>x!==f)},"Decision deleted"))}
+  return}
+ const mr=e.target.closest("#mtb tr.row");if(mr){mopen=mopen===mr.dataset.c?null:mr.dataset.c;renderM();return}
+ const dr=e.target.closest("#tb tr.row");if(dr){const id=+dr.dataset.id;open=open===id?null:id;renderD()}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.matches("tr.row")||e.target.matches("[data-cell]")))e.target.click();if(e.key==="Escape")closeModal()});
+$("mq").addEventListener("input",renderM);$("mst").addEventListener("change",renderM);
+$("q").addEventListener("input",renderD);[sel,ml].forEach(x=>x.addEventListener("change",renderD));
+document.querySelectorAll(".chip[data-mp]").forEach(b=>b.addEventListener("click",()=>{mparty=mparty===b.dataset.mp?"":b.dataset.mp;document.querySelectorAll(".chip[data-mp]").forEach(x=>x.setAttribute("aria-pressed",x.dataset.mp===mparty));renderM()}));
+document.querySelectorAll(".chip[data-p]").forEach(b=>b.addEventListener("click",()=>{party=party===b.dataset.p?"":b.dataset.p;document.querySelectorAll(".chip[data-p]").forEach(x=>x.setAttribute("aria-pressed",x.dataset.p===party));renderD()}));
+
+
+// ---------- modal helpers
+function closeModal(){document.querySelector(".ov")?.remove()}
+function modal(title,inner,onOk,okLabel="Save",extra=""){closeModal();
+ const ov=document.createElement("div");ov.className="ov";
+ ov.innerHTML=`<form class="md" novalidate><h3>${title}</h3>${inner}<div class="err" id="f-err"></div><div class="row">${extra}<button type="button" class="tbtn" id="f-cancel">Cancel</button><button type="submit" class="tbtn" style="background:var(--ink);color:var(--bg);border-color:var(--ink)">${okLabel}</button></div></form>`;
+ document.body.appendChild(ov);
+ ov.addEventListener("click",e=>{if(e.target===ov)closeModal()});ov.querySelector("#f-cancel").onclick=closeModal;
+ ov.querySelector("form").addEventListener("submit",e=>{e.preventDefault();const err=onOk(ov);if(err){ov.querySelector("#f-err").textContent=err}else closeModal()});
+ setTimeout(()=>ov.querySelector("input,select,textarea")?.focus(),30);return ov}
+function confirmBox(text,ok,fn){modal(text,"",()=>{fn()},ok)}
+const opt=(v,cur,l)=>`<option value="${esc(v)}" ${v===cur?"selected":""}>${esc(l??v)}</option>`;
+const rsSel=(id,cur)=>`<select id="${id}">${opt("R",cur,"R · Responsible")}${opt("S",cur,"S · Support")}${opt("",cur,"— · Not involved")}</select>`;
+const val=(ov,id)=>ov.querySelector("#"+id).value.trim();
+
+function checkHint(code,sky,gn){const lk=links(code);if(!lk.length)return "No detailed activities are linked to this line yet.";
+ const ok=lk.filter(r=>(own(r)==="sky"&&sky==="R")||(own(r)==="gn"&&gn==="R")).length;
+ const sug=ok===lk.length?"Aligned":ok===0?"Conflict":"Partial";
+ return `${ok} of ${lk.length} linked activities are led by a party that leads this line. Suggested check: <b>${sug}</b>.`}
+function editMaster(m){const isNew=!m;m=m||{code:"",sec:secs()[0],name:"",sky:"R",gn:"",note:"",status:"Not in SoW",comment:""};
+ const ov=modal(isNew?"Add master line":"Edit master line "+esc(m.code),`
+  <div class="two"><label>Code<input id="f-code" value="${esc(m.code)}" placeholder="e.g. GN12"></label>
+  <label>Section<select id="f-sec">${secs().map(s=>opt(s,m.sec)).join("")}${opt("__new","","+ New section…")}</select></label></div>
+  <label id="f-newsec-l" hidden>New section name<input id="f-newsec"></label>
+  <label>Master line<input id="f-name" value="${esc(m.name)}"></label>
+  <div class="two"><label>SKYFive${rsSel("f-sky",m.sky)}</label><label>GN Operator${rsSel("f-gn",m.gn)}</label></div>
+  <label>Remarks<input id="f-note" value="${esc(m.note)}"></label>
+  <div class="hint" id="f-hint">${checkHint(m.code,m.sky,m.gn)}</div>
+  <label>Detail check<select id="f-st">${ST.map(s=>opt(s,m.status)).join("")}</select></label>
+  <label>Comment<textarea id="f-cm">${esc(m.comment)}</textarea></label>`,ov=>{
+  const code=val(ov,"f-code"),name=val(ov,"f-name");if(!code||!name)return "Code and master line are required.";
+  if(S.master.some(x=>x.code===code&&x!==m))return `Code ${code} is already used.`;
+  let sec=val(ov,"f-sec");if(sec==="__new"){sec=val(ov,"f-newsec");if(!sec)return "Enter a name for the new section."}
+  change(()=>{const t=isNew?{}:mBy(m.code);const old=m.code;
+   Object.assign(t,{code,sec,name,sky:val(ov,"f-sky"),gn:val(ov,"f-gn"),note:val(ov,"f-note"),status:val(ov,"f-st"),comment:val(ov,"f-cm")});
+   if(isNew){const i=S.master.map(x=>x.sec).lastIndexOf(sec);S.master.splice(i<0?S.master.length:i+1,0,t)}
+   else if(old!==code)S.sow.forEach(r=>{if(r.mc===old)r.mc=code});
+   if(!isNew&&t.sec!==m.sec){S.master.splice(S.master.indexOf(t),1);const i=S.master.map(x=>x.sec).lastIndexOf(sec);S.master.splice(i<0?S.master.length:i+1,0,t)}
+  },isNew?`Added ${code}`:`Updated ${code}`)});
+ const upd=()=>{ov.querySelector("#f-hint").innerHTML=checkHint(m.code,val(ov,"f-sky"),val(ov,"f-gn"))};
+ ov.querySelector("#f-sky").onchange=upd;ov.querySelector("#f-gn").onchange=upd;
+ ov.querySelector("#f-sec").onchange=e=>{ov.querySelector("#f-newsec-l").hidden=e.target.value!=="__new"}}
+function delMaster(m){const lk=links(m.code);
+ const others=S.master.filter(x=>x!==m);
+ modal(`Delete ${esc(m.code)} · ${esc(m.name)}?`,lk.length?`<div class="hint">${lk.length} detailed activit${lk.length>1?"ies are":"y is"} linked to this line.</div>
+  <label>What happens to them<select id="f-act"><option value="move">Move them to another master line</option><option value="del">Delete them too</option><option value="keep">Keep them, unlinked</option></select></label>
+  <label id="f-to-l">Move to<select id="f-to">${others.map(x=>opt(x.code,"",x.code+" · "+x.name)).join("")}</select></label>`:`<div class="hint">No detailed activities are linked. You can undo this until you save.</div>`,ov=>{
+  const a=lk.length?val(ov,"f-act"):"",to=lk.length?val(ov,"f-to"):"";
+  change(()=>{S.master=S.master.filter(x=>x.code!==m.code);
+   if(a==="move")S.sow.forEach(r=>{if(r.mc===m.code)r.mc=to});
+   if(a==="del")S.sow=S.sow.filter(r=>r.mc!==m.code);
+   if(a==="keep")S.sow.forEach(r=>{if(r.mc===m.code)r.mc=""})},`Deleted ${m.code}`)},"Delete");
+ const a=document.querySelector("#f-act");if(a)a.onchange=()=>{document.querySelector("#f-to-l").hidden=a.value!=="move"}}
+function editDetail(r){const isNew=!r;const nid=Math.max(0,...S.sow.map(x=>x.id))+1;
+ r=r||{id:nid,ph:"P",act:"",sky:"R",gn:"",rmk:"",pen:"",src:"master",mc:ml.value||S.master[0]?.code||""};
+ modal(isNew?`Add detail activity #${nid}`:`Edit activity #${r.id}`,`
+  <label>Activity<input id="f-act" value="${esc(r.act)}"></label>
+  <div class="two"><label>SKYFive${rsSel("f-sky",r.sky)}</label><label>GN Operator${rsSel("f-gn",r.gn)}</label></div>
+  <div class="two"><label>Master line<select id="f-mc">${opt("",r.mc,"— Not linked")}${S.master.map(m=>opt(m.code,r.mc,m.code+" · "+m.name)).join("")}</select></label>
+  <label>Phase<select id="f-ph">${Object.entries(PH).map(([k,v])=>opt(k,r.ph,v)).join("")}</select></label></div>
+  <label>Remark<textarea id="f-rmk">${esc(r.rmk)}</textarea></label>
+  <div class="two"><label>Source<select id="f-src">${opt("sow",r.src,"Nokia SoW")}${opt("master",r.src,"Master SOR")}</select></label></div>`,ov=>{
+  const act=val(ov,"f-act");if(!act)return "Enter the activity name.";
+  const sky=val(ov,"f-sky"),gn=val(ov,"f-gn");if(sky!=="R"&&gn!=="R")return "Give one party R, so every activity has an owner.";
+  if(sky==="R"&&gn==="R")return "Only one party can be R. Set the other to S.";
+  change(()=>{const t=isNew?{id:nid}:S.sow.find(x=>x.id===r.id);
+   Object.assign(t,{act,sky,gn,mc:val(ov,"f-mc"),ph:val(ov,"f-ph"),rmk:val(ov,"f-rmk"),src:val(ov,"f-src")});
+   if(isNew)S.sow.push(t)},isNew?`Added #${nid}`:`Updated #${r.id}`)})}
+function delDetail(r){confirmBox(`Delete activity #${r.id} · ${esc(r.act)}?`,"Delete",()=>change(()=>{S.sow=S.sow.filter(x=>x.id!==r.id)},`Deleted #${r.id}`))}
+function editFlag(f){const isNew=!f;f=f||{id:Math.max(0,...S.flags.map(x=>x.id))+1,sev:"clarify",title:"",text:"",ref:""};
+ modal(isNew?"Add decision":"Edit decision",`<label>Title<input id="f-t" value="${esc(f.title)}"></label>
+  <label>Detail<textarea id="f-x">${esc(f.text)}</textarea></label>
+  <div class="two"><label>Priority<select id="f-s">${opt("high",f.sev,"High")}${opt("clarify",f.sev,"Clarify")}</select></label><label>Reference<input id="f-r" value="${esc(f.ref)}" placeholder="e.g. GN3 · #5"></label></div>`,ov=>{
+  const title=val(ov,"f-t");if(!title)return "Enter a title.";
+  change(()=>{const t=isNew?{id:f.id}:S.flags.find(x=>x.id===f.id);Object.assign(t,{title,text:val(ov,"f-x"),sev:val(ov,"f-s"),ref:val(ov,"f-r")});if(isNew)S.flags.push(t)},isNew?"Decision added":"Decision updated")})}
+$("addM").onclick=()=>editMaster(null);$("addD").onclick=()=>editDetail(null);$("addFlag").onclick=()=>editFlag(null);
+
+// ---------- save (republish this page)
+const RESET=":root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:14px}img{max-width:100%}[hidden]{display:none!important}";
+const SC="script",TP="template";
+function buildDoc(state){
+ const json=JSON.stringify(state).replace(/</g,"\\u003c");
+ return `<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>${RESET}</style></head><body>`+
+ `<title>A2G Responsibility Matrix</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n`+
+ `<link rel="stylesheet" href="${document.querySelector('link[rel=stylesheet]').href}">\n`+
+ `<${SC} src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" id="xlsx-lib"></${SC}>\n`+
+ `<style id="page-css">${$("page-css").textContent}</style>\n`+
+ `<${TP} id="shell">${$("shell").innerHTML}</${TP}>\n<div id="app"></div>\n`+
+ `<${SC} type="application/json" id="sor-data">${json}</${SC}>\n`+
+ `<${SC} id="main">${$("main").textContent}</${SC}>\n</body></html>`}
+$("saveBtn").onclick=async()=>{const btn=$("saveBtn");btn.disabled=true;$("emsg").textContent="Saving…";
+ const d=new Date(),st={...S,updated:d.toISOString().slice(0,10)+" "+d.toTimeString().slice(0,5)};
+ const a=await claude.use("artifact");
+ if(!a){$("emsg").textContent="Saving is not available in this view. Download Excel to keep your changes.";btn.disabled=false;return}
+ try{sessionStorage.setItem("sor-draft",JSON.stringify({base:SAVED.updated,state:S}))}catch(e){}
+ try{await a.publish(buildDoc(st));try{sessionStorage.removeItem("sor-draft")}catch(e){}}
+ catch(err){const c=err&&err.code;
+  if(c==="conflict"){$("emsg").textContent="Someone saved a newer version. Reloading it now; your changes are kept to re-apply."}
+  else if(c==="not_writer"||c==="not_granted"){ro=true;try{sessionStorage.removeItem("sor-draft")}catch(e){};renderAll()}
+  else{$("emsg").textContent="Save failed. Try again in a moment.";btn.disabled=false}}};
+
+// ---------- Excel export
+$("xlsBtn").onclick=async()=>{
+ if(!window.XLSX){toast("Excel export is still loading. Try again.");return}
+ const rs=v=>v==="R"?"x":v==="S"?"Supports":"";
+ const a1=[["","SkyFive","GN Operator","Remarks","Code","Linked detail items","Alignment with SoW","Comment"]];
+ let last="";S.master.forEach(m=>{if(m.sec!==last){if(last)a1.push([]);a1.push([m.sec]);last=m.sec}
+  a1.push([m.name,rs(m.sky),rs(m.gn),m.note,m.code,links(m.code).map(r=>"#"+r.id).join(", ")||"—",m.status,m.comment])});
+ const a2=[["#","Phase","Activity","SKYFive","GN Operator","Master code","Master line","Remark","Source"]].concat(
+  S.sow.map(r=>[r.id,PH[r.ph]||r.ph,r.act,r.sky,r.gn,r.mc,mBy(r.mc)?.name||"",r.rmk,r.src==="master"?"Added from master SOR":"Nokia SoW Ch.3"]));
+ const a3=[["Decision","Priority","Detail","Reference"]].concat(S.flags.map(f=>[f.title,f.sev==="high"?"High":"Clarify",f.text,f.ref]));
+ const wb=XLSX.utils.book_new();
+ [[a1,"SOR",[50,10,13,40,8,26,18,60]],[a2,"Detail",[5,26,46,10,13,10,40,60,22]],[a3,"Decisions",[44,10,80,20]]].forEach(([a,n,w])=>{const ws=XLSX.utils.aoa_to_sheet(a);ws["!cols"]=w.map(x=>({wch:x}));XLSX.utils.book_append_sheet(wb,ws,n)});
+ const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+ const dl=await claude.use("downloads");
+ if(!dl){toast("Download is not available in this view.");return}
+ try{await dl.save({filename:"A2G-SOR-GN-Operator.xlsx",data:new Uint8Array(buf)})}catch(e){if(e&&e.code!=="declined")toast("Download did not complete.")}};
+
+// ---------- tabs
+const views=["master","detail","pen","how","exec"];
+function show(v){if(!views.includes(v))v="master";views.forEach(x=>$("v-"+x).hidden=x!==v);document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v))}
+$("tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b){location.hash=b.dataset.v;show(b.dataset.v)}});
+addEventListener("hashchange",()=>show(location.hash.slice(1)));show(location.hash.slice(1));
+if(S!==SAVED&&JSON.stringify(S)!==JSON.stringify(SAVED)){hist=[structuredClone(SAVED)];editing=true;$("editBtn").setAttribute("aria-pressed","true");$("editBtn").textContent="Done editing"}
+renderAll();
+})();
+</script>
+
+</body></html>
